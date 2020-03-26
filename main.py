@@ -1,44 +1,35 @@
 import tensorflow as tf
-import numpy as np
+from tensorflow.examples.tutorials.mnist import input_data
 
+from models.cnn_model import CNNModel
 import config
 
 
 if __name__ == "__main__":
+    data_params = config.DataParams().__dict__
     model_params = config.ModelParams().__dict__
+    mnist = input_data.read_data_sets("/tmp/data/", one_hot=True, reshape=False)
 
-    x = tf.placeholder("float", (None, 80, 80, 3))
-    y = tf.placeholder("float", (None, 1))
+    x = tf.placeholder("float", (None, data_params["input_size"],
+                                 data_params["input_size"], data_params["input_dims"]))
+    y = tf.placeholder("float", (None, 10))
 
-    W = tf.Variable(tf.random_normal((5, 5, 3, 1)))
-    b = tf.Variable(tf.random_normal([1]))
-
-    W_2 = tf.Variable(tf.random_normal((1, 6400)))
-    b_2 = tf.Variable(tf.random_normal([1]))
-
-    conv = tf.nn.conv2d(x, W, 1, "SAME")
-    biased = tf.nn.bias_add(conv, b)
-
-    activation = tf.nn.relu(biased)
-    flatten = tf.compat.v1.layers.flatten(activation, name=None, data_format='channels_last')
-
-    densed = tf.matmul(W_2, flatten, transpose_a=False, transpose_b=True)
-    bias = densed + b_2
-
-    loss = tf.reduce_mean(tf.abs(y-bias))
-    optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
-    train_op = optimizer.minimize(loss)
+    model = CNNModel(model_params=model_params, data_params=data_params, data=x, target=y)
 
     init = tf.global_variables_initializer()
 
     with tf.Session() as sess:
         sess.run(init)
+        extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 
         for epoch in range(2000):
-            sess.run(train_op, feed_dict={x: np.zeros((32, 80, 80, 3)),
-                                          y: np.ones((32, 1))})
+            batch_xs, batch_ys = mnist.train.next_batch(model_params["batch_size"])
+            sess.run([model.optimize, extra_update_ops], feed_dict={model.data: batch_xs,
+                                                                    model.target: batch_ys,
+                                                                    model.training: True})
 
-            cost = sess.run(loss, feed_dict={x: np.zeros((32, 80, 80, 3)),
-                                             y: np.ones((32, 1))})
+            cost = sess.run(model.loss, feed_dict={model.data: batch_xs,
+                                                   model.target: batch_ys,
+                                                   model.training: False})
 
             print(cost)
