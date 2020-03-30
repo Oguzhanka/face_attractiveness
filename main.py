@@ -26,7 +26,7 @@ if __name__ == "__main__":
         batch_xs, batch_ys = data.next_train_batches()
         if not data.has_next():
             print("All data finished")
-            data.init_random_batches()
+            data.init_random_batches(model_params["batch_size"])
 
         extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 
