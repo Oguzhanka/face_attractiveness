@@ -46,7 +46,7 @@ class DataProcessor:
         self.data_copy = self.__divide_batches(self.middle_data, batch_size)
         self.label_copy = self.__divide_batches(self.middle_label, batch_size)
 
-    def next_train_batches(self):
+    def next_batches(self):
         self.cursor += 1
         if self.has_next():
             return self.data_copy[self.cursor - 1], self.label_copy[self.cursor - 1]

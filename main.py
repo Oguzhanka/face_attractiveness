@@ -23,7 +23,7 @@ if __name__ == "__main__":
 
     with tf.Session() as sess:
         sess.run(init)
-        batch_xs, batch_ys = data.next_train_batches()
+        batch_xs, batch_ys = data.next_batches()
         if not data.has_next():
             print("All data finished")
             data.init_random_batches(model_params["batch_size"])
