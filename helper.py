@@ -6,7 +6,8 @@ This script is taken from the website:
 Lazy property decorator is used throughout my project.
 """
 import functools
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 
 def lazy_property(function):
@@ -22,5 +23,5 @@ def lazy_property(function):
     return decorator
 
 
-INIT_METHODS = {"xavier": tf.contrib.layers.xavier_initializer,
+INIT_METHODS = {"xavier": tf.initializers.glorot_normal,
                 "gaussian": tf.random_normal_initializer}

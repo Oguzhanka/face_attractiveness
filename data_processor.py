@@ -1,9 +1,8 @@
-import copy
+from skimage import transform, io
+import numpy as np
 import pathlib
 import random
 import time
-
-import tensorflow as tf
 
 
 class DataProcessor:
@@ -16,13 +15,12 @@ class DataProcessor:
         else:
             self.data_list = list(pathlib.Path("images/test/").glob('*'))
 
-        self.data = list()
-        self.label = list()
+        self.data = []
+        self.label = []
 
         self.__read_data_to_tensor()
-
-        self.data_copy = copy.deepcopy(self.data)
-        self.label_copy = copy.deepcopy(self.label)
+        self.data_copy = []
+        self.label_copy = []
 
         self.middle_data = None
         self.middle_label = None
@@ -49,7 +47,7 @@ class DataProcessor:
     def next_batches(self):
         self.cursor += 1
         if self.has_next():
-            return self.data_copy[self.cursor - 1], self.label_copy[self.cursor - 1]
+            return self.data_copy[self.cursor - 1], np.array(self.label_copy[self.cursor - 1])[:, None]
         else:
             return None, None
 
@@ -57,13 +55,13 @@ class DataProcessor:
         return self.cursor != len(self.data_copy)
 
     def __reset_data(self):
-        self.data_copy = copy.deepcopy(self.data)
-        self.label_copy = copy.deepcopy(self.label)
+        self.data_copy = self.data.copy()
+        self.label_copy = self.label.copy()
 
     def __read_data_to_tensor(self):
         start_time = time.time()
         for image_path in self.data_list:
-            self.data.append(self.__decode_img(tf.io.read_file(str(image_path))))
+            self.data.append(self.__decode_img(io.imread(str(image_path))))
             self.label.append(self.__get_label(image_path.stem))
 
         print("Reading images takes %s\n" % (time.time() - start_time))
@@ -74,15 +72,15 @@ class DataProcessor:
 
     @staticmethod
     def __divide_batches(data, batch_size):
-        return [data[i:i + batch_size] for i in range(0, len(data), batch_size - 1)]
+        data = np.stack(data, axis=0)
+        return [data[i:i + batch_size] for i in range(0, int(data.shape[0]), batch_size - 1)]
 
     @staticmethod
     def __decode_img(img):
-        img = tf.image.decode_jpeg(img, channels=3)
-        img = tf.image.convert_image_dtype(img, tf.float32)
-        return tf.image.resize(img, [80, 80])
+        img = img.astype(float)
+        return transform.resize(img, [80, 80])
 
     @staticmethod
     def __get_label(file_path):
-        parts = tf.strings.split(file_path, "_")
-        return parts[0]
+        parts = file_path.split("_")[0]
+        return parts

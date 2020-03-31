@@ -1,6 +1,6 @@
 
 
-IMAGE_SIZE = (28, 28, 1)
+IMAGE_SIZE = (80, 80, 3)
 
 
 class DataParams:
@@ -11,13 +11,13 @@ class DataParams:
 
 class ModelParams:
     def __init__(self):
-        self.batch_size = 64
+        self.batch_size = 128
         self.weight_init = "xavier"
         self.learning_rate = 1e-3
         self.batch_norm = True
 
         self.l2_loss = True
-        self.alpha = 0.001
+        self.alpha = 1e-8
 
-        self.dropout = True
+        self.dropout = False
         self.keep_rate = 0.5
