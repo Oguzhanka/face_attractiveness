@@ -28,7 +28,7 @@ class DataProcessor:
         self.cursor = 0
 
     def get_data(self):
-        return self.data, self.label
+        return np.stack(self.data, axis=0), np.stack(self.label, axis=0)[:, None]
 
     def init_random_batches(self, batch_size):
         self.__reset_data()
@@ -64,6 +64,11 @@ class DataProcessor:
             self.data.append(self.__decode_img(io.imread(str(image_path))))
             self.label.append(self.__get_label(image_path.stem))
 
+        whole_data = np.stack(self.data, axis=0)
+        data_mean = whole_data.mean(axis=0)
+        data_std = whole_data.std(axis=0)
+        norm_data = (whole_data - data_mean) / data_std
+        self.data = [data for data in norm_data]
         print("Reading images takes %s\n" % (time.time() - start_time))
 
     @staticmethod

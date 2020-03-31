@@ -5,12 +5,15 @@ from data_processor import DataProcessor
 from models.cnn_model import CNNModel
 import config
 
+
 if __name__ == "__main__":
     data_params = config.DataParams().__dict__
     model_params = config.ModelParams().__dict__
 
     data = DataProcessor("train")
     data.init_random_batches(model_params["batch_size"])
+
+    val_data = DataProcessor("val")
 
     with tf.device('/device:GPU:0'):
         x = tf.placeholder("float", (None, data_params["input_size"],
@@ -21,7 +24,7 @@ if __name__ == "__main__":
         init = tf.global_variables_initializer()
 
         with tf.Session() as sess:
-            file_writer = tf.summary.FileWriter('./', sess.graph)
+            file_writer = tf.summary.FileWriter('./outs', sess.graph)
             sess.run(init)
             if not data.has_next():
                 print("All data finished")
@@ -29,7 +32,7 @@ if __name__ == "__main__":
 
             extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 
-            for epoch in range(2000):
+            for epoch in range(model_params["num_epochs"]):
                 model.visualize()
                 print("\nEPOCH: " + str(epoch))
                 data.init_random_batches(batch_size=model_params["batch_size"])
@@ -51,4 +54,10 @@ if __name__ == "__main__":
                     mean_cost += cost
                     len_ += 1
 
-                print(f"\rTraining Loss: {mean_cost / len_}", end="", flush=True)
+                print(f"\rTraining Loss: {mean_cost / len_}")
+                val_x, val_y = val_data.get_data()
+                val_loss = sess.run(model.data_loss, feed_dict={model.data: val_x,
+                                                                model.target: val_y,
+                                                                model.training: False})
+
+                print(f"Validation Loss: {val_loss}")
