@@ -12,8 +12,9 @@ class CNNModel:
         self.params = model_params
         self.data_params = data_params
 
-        init_args = {"mean": 0.01,
-                     "stddev": 0.001}
+        init_args = {"mean": 0.00,
+                     "stddev": 0.1}
+        # init_args = {}
 
         self.weight_dict = {"W_c_1": tf.compat.v1.get_variable(shape=(7, 7, self.data_params["input_dims"], 16),
                                                                initializer=INIT_METHODS[self.params["weight_init"]](**init_args),
@@ -67,40 +68,61 @@ class CNNModel:
         self.training = tf.compat.v1.placeholder(tf.bool, shape=[])
         self.layer_out = None
 
-        # _ = self.predict
+        self.convs = {}
+        self.biass = {}
+        self.activations = {}
+        self.pools = {}
+        self.weight = {"W_c_1": None}
+
+        self.densed = {}
+        self.biased = {}
+        self.activated = {}
+        self.dense_weights = {}
+        self.bias_weights = {}
+
         _ = self.optimize
-        # _ = self.loss
-        # _ = self.data_loss
         self.epoch_counter = 0
-        shutil.rmtree("./weights")
-        os.mkdir("./weights")
 
     @lazy_property
     def predict(self):
-        layer_out = self.data
         for c in range(1, 9):
-            conv = tf.nn.conv2d(layer_out, self.weight_dict[f"W_c_{c}"], 1, "VALID")
-            biased = tf.nn.bias_add(conv, self.weight_dict[f"b_c_{c}"])
+            if c == 1:
+                input_ = self.data
+                self.weight["W_c_1"] = tf.transpose(self.weight_dict["W_c_1"], [3, 0, 1, 2])
+            else:
+                input_ = pool
+            conv = tf.nn.conv2d(input_, self.weight_dict[f"W_c_{c}"], 1, "VALID")
+            self.convs[c] = tf.transpose(conv, [3, 0, 1, 2])
+            bias = tf.nn.bias_add(conv, self.weight_dict[f"b_c_{c}"])
+            self.biass[c] = tf.transpose(bias, [3, 0, 1, 2])
             if self.params["batch_norm"]:
-                biased = tf.compat.v1.layers.batch_normalization(biased, axis=-1, training=self.training,
-                                                                 momentum=0.7)
-            layer_out = tf.nn.relu(biased)
+                bias = tf.compat.v1.layers.batch_normalization(bias, axis=-1, training=self.training,
+                                                               momentum=0.7)
+            activation = tf.nn.relu(bias)
+            self.activations[c] = tf.transpose(activation, [3, 0, 1, 2])
+            pool = tf.nn.pool(activation, self.weight_dict[f"W_c_{c}"].shape[:-2],
+                              "AVG", padding="VALID")
+            self.pools[c] = tf.transpose(pool, [3, 0, 1, 2])
 
-            layer_out = tf.nn.pool(layer_out, self.weight_dict[f"W_c_{c}"].shape[:-2], "AVG", padding="VALID")
-
-        flatten = tf.compat.v1.layers.flatten(layer_out, name=None, data_format='channels_last')
+        flatten = tf.compat.v1.layers.flatten(pool, name=None, data_format='channels_last')
 
         layer_out = flatten
         for d in range(1, 4):
             densed = tf.matmul(layer_out, self.weight_dict[f"W_{d}"],
                                transpose_a=False, transpose_b=False)
+            self.densed[d] = densed
+            self.dense_weights[d] = self.weight_dict[f"W_{d}"]
             layer_out = densed + self.weight_dict[f"b_{d}"]
+            self.biased[d] = layer_out
+            self.bias_weights = self.weight_dict[f"b_{d}"]
+
             if self.params["batch_norm"]:
                 layer_out = tf.compat.v1.layers.batch_normalization(layer_out, axis=-1, training=self.training,
                                                                     momentum=0.7)
 
             if d != 3:
                 layer_out = tf.nn.relu(layer_out)
+                self.activated[d] = layer_out
 
                 # layer_out = tf.cond(self.training, lambda: tf.nn.dropout(layer_out, self.params["keep_rate"]),
                 #                     lambda: layer_out)
@@ -141,13 +163,3 @@ class CNNModel:
 
     def evaluate(self):
         return tf.reduce_mean(tf.abs(tf.subtract(self.target, self.predict)))
-
-    def visualize(self):
-
-        weights = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES)
-        for i in range(16):
-            plt.subplot(4, 4, i + 1)
-            plt.imshow(((weights[0][:, :, :, i].eval() + 3) / 6 * 255).astype(int))
-
-        self.epoch_counter += 1
-        plt.savefig(f"./weights/{self.epoch_counter}.png")

@@ -24,4 +24,5 @@ def lazy_property(function):
 
 
 INIT_METHODS = {"xavier": tf.initializers.glorot_normal,
-                "gaussian": tf.random_normal_initializer}
+                "gaussian": tf.random_normal_initializer,
+                "uniform": tf.uniform_unit_scaling_initializer}

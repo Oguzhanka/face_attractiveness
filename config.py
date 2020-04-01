@@ -12,9 +12,9 @@ class DataParams:
 class ModelParams:
     def __init__(self):
         self.batch_size = 32
-        self.num_epochs = 1000
+        self.num_epochs = 5
         self.weight_init = "gaussian"
-        self.learning_rate = 1e-3
+        self.learning_rate = 1e-4
         self.batch_norm = False
 
         self.loss_type = "l1"
