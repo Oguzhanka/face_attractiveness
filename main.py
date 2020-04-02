@@ -1,13 +1,11 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
 from data_processor import DataProcessor
-from tensorflow.python import debug as tf_debug
-
 from models.cnn_model import CNNModel
 import config
 
+tf.disable_v2_behavior()
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 if __name__ == "__main__":
     data_params = config.DataParams().__dict__
@@ -19,7 +17,6 @@ if __name__ == "__main__":
     val_data = DataProcessor("val")
     test_data = DataProcessor("test")
 
-    #  with tf.device('/device:GPU:0'):
     x = tf.placeholder("float", (None, data_params["input_size"],
                                  data_params["input_size"], data_params["input_dims"]))
     y = tf.placeholder("float", (None, 1))
@@ -39,7 +36,7 @@ if __name__ == "__main__":
         with tf.name_scope("Layer-1") as scope:
             tf.summary.image(f"Filters", model.weight[f"W_c_{1}"])
 
-        for c in range(1, 9):
+        for c in range(1, model.num_layers):
             with tf.name_scope("ConvLayer-" + str(c)) as scope:
 
                 tf.summary.histogram(f"Convolved Image", model.convs[c])
@@ -63,6 +60,7 @@ if __name__ == "__main__":
         merged_summary_op = tf.summary.merge_all()
 
         for epoch in range(model_params["num_epochs"]):
+            global_step += 1
             print("\nEPOCH: " + str(epoch))
             data.init_random_batches(batch_size=model_params["batch_size"])
             mean_cost = 0.0
@@ -89,7 +87,15 @@ if __name__ == "__main__":
                                                                                        model.target: val_y,
                                                                                        model.training: False})
 
+            tf.summary.scalar("Val-Loss", val_loss)
             file_writer.add_summary(summ, global_step.eval(session=sess))
 
             print(f"Validation Loss: {val_loss}")
             file_writer.flush()
+
+        test_x, test_y = test_data.get_data()
+        test_loss = sess.run([model.data_loss], feed_dict={model.data: test_x,
+                                                           model.target: test_y,
+                                                           model.training: False})
+
+        print("Test Loss: " + str(test_loss))
