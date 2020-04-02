@@ -13,22 +13,22 @@ class CNNModel:
         self.data_params = data_params
 
         init_args = {"mean": 0.00,
-                     "stddev": 0.1}
+                     "stddev": 0.01}
         # init_args = {}
 
-        self.weight_dict = {"W_c_1": tf.compat.v1.get_variable(shape=(7, 7, self.data_params["input_dims"], 16),
+        self.weight_dict = {"W_c_1": tf.compat.v1.get_variable(shape=(5, 5, self.data_params["input_dims"], 16),
                                                                initializer=INIT_METHODS[self.params["weight_init"]](**init_args),
                                                                name="W_c_1"),
                             "b_c_1": tf.Variable(tf.zeros([16])),
-                            "W_c_2": tf.compat.v1.get_variable(shape=(7, 7, 16, 16),
+                            "W_c_2": tf.compat.v1.get_variable(shape=(5, 5, 16, 16),
                                                                initializer=INIT_METHODS[self.params["weight_init"]](**init_args),
                                                                name="W_c_2"),
                             "b_c_2": tf.Variable(tf.zeros([16])),
-                            "W_c_3": tf.compat.v1.get_variable(shape=(5, 5, 16, 32),
+                            "W_c_3": tf.compat.v1.get_variable(shape=(3, 3, 16, 32),
                                                                initializer=INIT_METHODS[self.params["weight_init"]](**init_args),
                                                                name="W_c_3"),
                             "b_c_3": tf.Variable(tf.zeros([32])),
-                            "W_c_4": tf.compat.v1.get_variable(shape=(5, 5, 32, 32),
+                            "W_c_4": tf.compat.v1.get_variable(shape=(3, 3, 32, 32),
                                                                initializer=INIT_METHODS[self.params["weight_init"]](**init_args),
                                                                name="W_c_4"),
                             "b_c_4": tf.Variable(tf.zeros([32])),
@@ -49,7 +49,7 @@ class CNNModel:
                                                                name="W_c_8"),
                             "b_c_8": tf.Variable(tf.zeros([512])),
 
-                            "W_1": tf.compat.v1.get_variable(shape=(20 ** 2 * 512, 1024),
+                            "W_1": tf.compat.v1.get_variable(shape=(56 ** 2 * 32, 1024),
                                                              initializer=INIT_METHODS[self.params["weight_init"]](**init_args),
                                                              name="W_1"),
                             "b_1": tf.Variable(tf.zeros([1024])),
@@ -85,7 +85,7 @@ class CNNModel:
 
     @lazy_property
     def predict(self):
-        for c in range(1, 9):
+        for c in range(1, 5):
             if c == 1:
                 input_ = self.data
                 self.weight["W_c_1"] = tf.transpose(self.weight_dict["W_c_1"], [3, 0, 1, 2])
@@ -101,7 +101,7 @@ class CNNModel:
             activation = tf.nn.relu(bias)
             self.activations[c] = tf.transpose(activation, [3, 0, 1, 2])
             pool = tf.nn.pool(activation, self.weight_dict[f"W_c_{c}"].shape[:-2],
-                              "AVG", padding="VALID")
+                              "MAX", padding="VALID")
             self.pools[c] = tf.transpose(pool, [3, 0, 1, 2])
 
         flatten = tf.compat.v1.layers.flatten(pool, name=None, data_format='channels_last')
