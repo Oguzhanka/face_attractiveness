@@ -1,26 +1,31 @@
+"""
+Model implementation.
+"""
 from helper import lazy_property, INIT_METHODS
-import matplotlib.pyplot as plt
 import tensorflow as tf
-import shutil
-import os
 
 
 class CNNModel:
+    """
+    CNN model implementation. Covers the implementations for both the large and the
+    compact network.
+    """
     def __init__(self, data, target, model_params, data_params):
         self.data = data
         self.target = target
         self.params = model_params
         self.data_params = data_params
 
+        # Weight initialization object arguments.
         if self.params["weight_init"] == "gaussian":
             init_args = {"mean": 0.0,
                          "stddev": 1}
         else:
             init_args = {}
 
-        if model_params["model_type"] == "large":
-            self.num_layers = 9
-            self.num_deep = 4
+        if model_params["model_type"] == "large":       # LargeNet Implementation.
+            self.num_layers = 9                         # Number of conv. layers.
+            self.num_deep = 4                           # NUmber of dense layers.
             self.strides = [1, 1, 1, 1, 1, 1, 1, 1]
             self.weight_dict = {"W_c_1": tf.compat.v1.get_variable(shape=(7, 7, self.data_params["input_dims"], 16),
                                                                    initializer=INIT_METHODS[self.params["weight_init"]](**init_args),
@@ -67,7 +72,7 @@ class CNNModel:
                                                                  name="W_3"),
                                 "b_3": tf.Variable(tf.zeros([1]))}
 
-        else:
+        else:                           # Implementation of the compact network.
             self.num_layers = 5
             self.num_deep = 4
             self.strides = [3, 1, 1, 1]
@@ -104,9 +109,10 @@ class CNNModel:
                                                                  name="W_3"),
                                 "b_3": tf.Variable(tf.zeros([1]))}
 
-        for key, val in self.weight_dict.items():
+        for key, val in self.weight_dict.items():   # Rename the layers.
             self.weight_dict[key] = tf.identity(self.weight_dict[key], name=key)
 
+        # Flag indicating whether the current session is training or prediction.
         self.training = tf.compat.v1.placeholder(tf.bool, shape=[])
         self.layer_out = None
 
@@ -123,12 +129,17 @@ class CNNModel:
         self.bias_weights = {}
         self._loss = None
 
+        # Initialize the lazy properties.
         _ = self.optimize
         _ = self.eval_loss
         self.epoch_counter = 0
 
     @lazy_property
     def predict(self):
+        """
+        Forward function for the models.
+        :return: Output of the model.
+        """
         for c in range(1, self.num_layers):
             if c == 1:
                 input_ = self.data
@@ -176,6 +187,10 @@ class CNNModel:
 
     @lazy_property
     def optimize(self):
+        """
+        One step optimization for the specified loss function.
+        :return: optimizer.
+        """
         loss = self.loss
         optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=self.params["learning_rate"],
                                                      beta1=0.8, beta2=0.8)
@@ -184,6 +199,10 @@ class CNNModel:
 
     @lazy_property
     def loss(self):
+        """
+        Overall loss function that contains the data loss and the regularization losses.
+        :return: Overall loss.
+        """
         self._loss = self.data_loss
         if self.params["l2_loss"]:
             self._loss += self.l2_loss
@@ -191,6 +210,10 @@ class CNNModel:
 
     @lazy_property
     def data_loss(self):
+        """
+        Data loss from the label predictions.
+        :return: data loss.
+        """
         if self.params["loss_type"] == "l1":
             loss = tf.reduce_mean(tf.abs(tf.subtract(self.target, self.predict)))
         elif self.params["loss_type"] == "l2":
@@ -201,15 +224,27 @@ class CNNModel:
 
     @lazy_property
     def eval_loss(self):
+        """
+        Evaluation loss, L1.
+        :return: evaluation loss.
+        """
         loss = tf.reduce_mean(tf.abs(tf.subtract(self.target, self.predict)))
         return loss
 
     @lazy_property
     def l2_loss(self):
+        """
+        L2 regularization loss.
+        :return: Regularization loss.
+        """
         l2_loss = 0.0
         for key, val in self.weight_dict.items():
             l2_loss += self.params["alpha"] * tf.nn.l2_loss(val)
         return l2_loss
 
     def evaluate(self):
+        """
+
+        :return:
+        """
         return tf.reduce_mean(tf.abs(tf.subtract(self.target, self.predict)))
