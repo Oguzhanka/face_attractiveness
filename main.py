@@ -1,12 +1,11 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
 from data_processor import DataProcessor
-
 from models.cnn_model import CNNModel
 import config
 
+tf.disable_v2_behavior()
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 if __name__ == "__main__":
     data_params = config.DataParams().__dict__
@@ -44,7 +43,7 @@ if __name__ == "__main__":
         with tf.name_scope("Layer-1") as scope:
             tf.summary.image(f"Filters", model.weight[f"W_c_{1}"])  # First conv. layer
 
-        for c in range(1, 5):   # For every convolutional layer...
+        for c in range(1, model.num_layers):
             with tf.name_scope("ConvLayer-" + str(c)) as scope:
 
                 tf.summary.histogram(f"Convolved Image", model.convs[c])        # Image after convolution.
@@ -56,7 +55,7 @@ if __name__ == "__main__":
                 tf.summary.histogram(f"Activation Image", model.activations[c]) # Image hist. after the activation.
                 tf.summary.histogram(f"Pooled Image", model.pools[c])           # Image hist. after the pooling.
 
-        for d in range(1, 4):   # For every dense layer...
+        for d in range(1, model.num_deep):
             with tf.name_scope("DenseLayer-" + str(d)) as scope:
                 tf.summary.histogram("Dense Output", model.densed[d])           # Output hist. after the weights.
                 tf.summary.histogram("Biased Output", model.biased[d])          # Output hist after the bias.
@@ -67,17 +66,7 @@ if __name__ == "__main__":
 
         merged_summary_op = tf.summary.merge_all()      # Merges all summaries from different logs.
 
-        val_x, val_y = val_data.get_data()              # Get the validation data and labels.
-        val_loss, summ = sess.run([model.data_loss, merged_summary_op], feed_dict={model.data: val_x,
-                                                                                   model.target: val_y,
-                                                                                   model.training: False})
-        # Compute and print the validation performance prior to training.
-        print(f"Validation Loss: {val_loss}")
-
-        file_writer.add_summary(summ, global_step.eval(session=sess))
-        file_writer.flush()
-
-        for epoch in range(model_params["num_epochs"]): # For every epoch...
+        for epoch in range(model_params["num_epochs"]):
             global_step += 1
             print("\nEPOCH: " + str(epoch))
             data.init_random_batches(batch_size=model_params["batch_size"])     # Shuffle the training data.
@@ -92,7 +81,7 @@ if __name__ == "__main__":
                                                                         model.training: True})
                 # Optimize the model for a single step.
 
-                cost = sess.run(model.data_loss, feed_dict={model.data: batch_xs,
+                cost = sess.run(model.eval_loss, feed_dict={model.data: batch_xs,
                                                             model.target: batch_ys,
                                                             model.training: False})
                 # Compute the loss function.
@@ -104,11 +93,26 @@ if __name__ == "__main__":
             # Print the average loss for all batches in the training set.
             print(f"\rTraining Loss: {mean_cost / len_}")
             val_x, val_y = val_data.get_data()
-            val_loss, summ = sess.run([model.data_loss, merged_summary_op], feed_dict={model.data: val_x,
+            val_loss, summ = sess.run([model.eval_loss, merged_summary_op], feed_dict={model.data: val_x,
                                                                                        model.target: val_y,
                                                                                        model.training: False})
 
             file_writer.add_summary(summ, global_step.eval(session=sess))
+            file_writer.add_summary(summary=tf.Summary(value=[tf.Summary.Value(tag="Train-Loss",
+                                                                               simple_value=mean_cost / len_),
+                                                              ]), global_step=global_step.eval(session=sess))
+            file_writer.add_summary(summary=tf.Summary(value=[tf.Summary.Value(tag="Reg-Loss",
+                                                                               simple_value=model.l2_loss.eval()),
+                                                              ]), global_step=global_step.eval(session=sess))
+            file_writer.add_summary(summary=tf.Summary(value=[tf.Summary.Value(tag="Val-Loss", simple_value=val_loss),
+                                                       ]), global_step=global_step.eval(session=sess))
 
             print(f"Validation Loss: {val_loss}")
             file_writer.flush()
+
+        test_x, test_y = test_data.get_data()
+        test_loss = sess.run([model.eval_loss], feed_dict={model.data: test_x,
+                                                           model.target: test_y,
+                                                           model.training: False})
+
+        print("Test Loss: " + str(test_loss))

@@ -33,16 +33,16 @@ class ModelParams:
         :attr keep_rate: Dropout keep probability.
         """
         self.model_type = "compact"
-        self.batch_size = 64
-        self.num_epochs = 100
-        self.weight_init = "gaussian"
-        self.learning_rate = 1e-4
+        self.batch_size = 32
+        self.num_epochs = 45
+        self.weight_init = "xavier"
+        self.learning_rate = 1e-3
         self.batch_norm = False
 
-        self.loss_type = "l1"
+        self.loss_type = "l2"
 
         self.l2_loss = False
-        self.alpha = 1e-8
+        self.alpha = 1e-3
 
         self.dropout = False
         self.keep_rate = 0.5
