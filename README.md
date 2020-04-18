@@ -60,7 +60,7 @@ from the default data folder path which is "./images/". For each of the training
 test split, all data is read and their labels are stored separately. 
 
 During training, random mini-batches are generated from the whole list of images. These batches are
-given to the model for each call. FOr the validation and the test sets, whole data is returned 
+given to the model for each call. For the validation and the test sets, whole data is returned 
 without generating mini-batches.
 
 
