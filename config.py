@@ -34,7 +34,7 @@ class ModelParams:
         """
         self.model_type = "compact"
         self.batch_size = 32
-        self.num_epochs = 45
+        self.num_epochs = 25
         self.weight_init = "xavier"
         self.learning_rate = 1e-3
         self.batch_norm = False

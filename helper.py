@@ -1,24 +1,24 @@
 """
-This script is taken from the website:
+This script is inspired from the work of:
         https://danijar.com/structuring-your-tensorflow-models/
         Author: Danjar Hafner
 
-Lazy property decorator is used throughout my project.
+Lazy property decorator is used in the model of my project.
 """
 import functools
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 
 
-def lazy_property(function):
-    attribute = '_cache_' + function.__name__
+def cache_func(func):
+    attr = '_cache_' + func.__name__
 
     @property
-    @functools.wraps(function)
+    @functools.wraps(func)
     def decorator(self):
-        if not hasattr(self, attribute):
-            setattr(self, attribute, function(self))
-        return getattr(self, attribute)
+        if not hasattr(self, attr):
+            setattr(self, attr, func(self))
+        return getattr(self, attr)
 
     return decorator
 

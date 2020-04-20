@@ -1,4 +1,6 @@
 import os
+import numpy as np
+import matplotlib.pyplot as plt
 import tensorflow.compat.v1 as tf
 from data_processor import DataProcessor
 from models.cnn_model import CNNModel
@@ -60,7 +62,7 @@ if __name__ == "__main__":
                 tf.summary.histogram("Dense Output", model.densed[d])           # Output hist. after the weights.
                 tf.summary.histogram("Biased Output", model.biased[d])          # Output hist after the bias.
                 try:
-                    tf.summary.histogram("Activated Output", model.activated[d])    # OUtput after batch_norm layer.
+                    tf.summary.histogram("Activated Output", model.activated[d])    # Output after batch_norm layer.
                 except KeyError:
                     pass
 
@@ -116,3 +118,18 @@ if __name__ == "__main__":
                                                            model.training: False})
 
         print("Test Loss: " + str(test_loss))
+
+        random_indices = np.random.choice(list(range(test_x.shape[0])), 9)
+        random_images = [test_x[idx][None, :] for idx in random_indices]
+        random_preds = [sess.run(model.predict, feed_dict={model.data: image, model.training: False})
+                        for image in random_images]
+        random_labels = [test_y[idx] for idx in random_indices]
+
+        for i, image, prediction, label in zip(range(9), random_images, random_preds, random_labels):
+            plt.subplot(3, 3, i+1)
+            plt.tight_layout()
+            plt.imshow(np.mean(((image[0] - image.min()) / (image.max() - image.min()) * 255), axis=-1).astype(int))
+            plt.title("True Score: {}".format(label))
+            plt.xlabel("Model prediction: \n{}".format(prediction[0]))
+
+        plt.savefig("./samples.png", figsize=(70, 70))

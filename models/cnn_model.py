@@ -1,7 +1,7 @@
 """
 Model implementation.
 """
-from helper import lazy_property, INIT_METHODS
+from helper import cache_func, INIT_METHODS
 import tensorflow as tf
 
 
@@ -25,7 +25,7 @@ class CNNModel:
 
         if model_params["model_type"] == "large":       # LargeNet Implementation.
             self.num_layers = 9                         # Number of conv. layers.
-            self.num_deep = 4                           # NUmber of dense layers.
+            self.num_deep = 4                           # Number of dense layers.
             self.strides = [1, 1, 1, 1, 1, 1, 1, 1]
             self.weight_dict = {"W_c_1": tf.compat.v1.get_variable(shape=(7, 7, self.data_params["input_dims"], 16),
                                                                    initializer=INIT_METHODS[self.params["weight_init"]](**init_args),
@@ -134,7 +134,7 @@ class CNNModel:
         _ = self.eval_loss
         self.epoch_counter = 0
 
-    @lazy_property
+    @cache_func
     def predict(self):
         """
         Forward function for the models.
@@ -185,7 +185,7 @@ class CNNModel:
 
         return layer_out
 
-    @lazy_property
+    @cache_func
     def optimize(self):
         """
         One step optimization for the specified loss function.
@@ -197,7 +197,7 @@ class CNNModel:
         train_op = optimizer.minimize(loss)
         return train_op
 
-    @lazy_property
+    @cache_func
     def loss(self):
         """
         Overall loss function that contains the data loss and the regularization losses.
@@ -208,7 +208,7 @@ class CNNModel:
             self._loss += self.l2_loss
         return self._loss
 
-    @lazy_property
+    @cache_func
     def data_loss(self):
         """
         Data loss from the label predictions.
@@ -222,16 +222,16 @@ class CNNModel:
             loss = 0.0
         return loss
 
-    @lazy_property
+    @cache_func
     def eval_loss(self):
         """
         Evaluation loss, L1.
         :return: evaluation loss.
         """
-        loss = tf.reduce_mean(tf.abs(tf.subtract(self.target, self.predict)))
+        loss = tf.reduce_mean(tf.abs(tf.subtract(self.target, tf.math.round(self.predict))))
         return loss
 
-    @lazy_property
+    @cache_func
     def l2_loss(self):
         """
         L2 regularization loss.
@@ -247,4 +247,4 @@ class CNNModel:
 
         :return:
         """
-        return tf.reduce_mean(tf.abs(tf.subtract(self.target, self.predict)))
+        return tf.reduce_mean(tf.abs(tf.subtract(self.target, tf.math.round(self.predict))))
