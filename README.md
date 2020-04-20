@@ -1,6 +1,7 @@
 # Assessing Face Attractivity With Convolutional Networks
 
-
+## Author
+Oğuzhan Karaahmetoğlu
 
 ## Folder structure
 
